@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reserve Charging Slot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Include your full dashboard CSS here or link to a CSS file if shared */
+    body {
+      display: flex;
+      background: #f4f6f9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #2c3e50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    .main {
+      margin-left: 220px;
+      padding: 30px;
+      flex-grow: 1;
+    }
+
+    .form-container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      max-width: 600px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .error {
+      color: red;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sidebar">
+    <h2>ChargeNow</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stations">Find Stations</a>
+    <a href="/user/reservations">My Reservations</a>
+    <a href="/user/profile">Profile</a>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <div class="main">
+    <div class="form-container">
+      <h2>Reserve Charging Slot</h2>
+
+      <p><strong>Station Name:</strong> {{station.name}}</p>
+      <p><strong>Location:</strong> {{station.location}}</p>
+      <p><strong>Total Slots:</strong> {{station.slots}}</p>
+      <p><strong>Available Slots:</strong> {{station.availableSlots}}</p>
+
+      {{#if error}}
+        <div class="error">{{error}}</div>
+      {{/if}}
+
+      <form method="POST" action="/reserve/{{station._id}}">
+        <label for="date">Date:</label>
+        <input type="date" name="date" required value="{{previousInput.date}}">
+
+        <label for="startTime">Start Time:</label>
+        <input type="time" name="startTime" required value="{{previousInput.startTime}}">
+
+        <label for="endTime">End Time:</label>
+        <input type="time" name="endTime" required value="{{previousInput.endTime}}">
+
+        <button type="submit">Reserve</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

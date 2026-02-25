@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Find Charging Stations</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      display: flex;
+      background: #f1f3f5;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #2c3e50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    .main {
+      margin-left: 220px;
+      flex-grow: 1;
+      padding: 30px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    #map {
+      height: 400px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .search-bar {
+      margin-bottom: 15px;
+    }
+
+    .search-bar input {
+      padding: 10px;
+      width: 300px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .search-bar button {
+      padding: 10px 15px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+
+    .station-card {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+    }
+
+    .station-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .station-card-content {
+      display: flex;
+      align-items: center;
+    }
+
+    .station-card img {
+      width: 120px;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-right: 15px;
+    }
+
+    .station-card a {
+      display: inline-block;
+      margin-top: 8px;
+      background-color: #28a745;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      text-decoration: none;
+    }
+
+    .station-card a:nth-child(2) {
+      background: #17a2b8;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+
+      body {
+        flex-direction: column;
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>ChargeNow</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stations">Find Stations</a>
+    <a href="/reservation-history">My Reservations</a>
+    <a href="/profile">Profile</a>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <div class="main">
+    <h2>Find Charging Stations</h2>
+    <div class="search-bar">
+      <input type="text" id="searchQuery" placeholder="Search by name or location..." />
+      <button onclick="searchStations()">Search</button>
+    </div>
+    <div id="map"></div>
+    <div id="stationResults"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <script>
+    let map;
+    let userLocation = null;
+    let markers = [];
+
+    function initMap() {
+      map = L.map('map').setView([8.5241, 76.9366], 10); // fallback view
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      const geocoder = L.Control.geocoder({
+        defaultMarkGeocode: false
+      })
+      .on('markgeocode', function (e) {
+        const { lat, lng } = e.geocode.center;
+        map.setView([lat, lng], 13);
+        fetchNearbyStations(lat, lng);
+        L.marker([lat, lng])
+          .addTo(map)
+          .bindPopup(e.geocode.name)
+          .openPopup();
+      })
+      .addTo(map);
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          map.setView([userLocation.lat, userLocation.lng], 13);
+          fetchNearbyStations(userLocation.lat, userLocation.lng);
+        });
+      }
+
+      map.on('click', function (e) {
+        const { lat, lng } = e.latlng;
+        map.setView([lat, lng], 13);
+        fetchNearbyStations(lat, lng);
+      });
+    }
+
+    async function fetchNearbyStations(lat, lng) {
+      const res = await fetch(`/api/stations/nearby?lat=${lat}&lng=${lng}`);
+      const result = await res.json();
+if (result.success) {
+    renderMapMarkers(result.stations);
+    renderList(result.stations);
+}
+    }
+
+    async function searchStations() {
+      const query = document.getElementById('searchQuery').value.trim();
+      if (!query) return;
+      const res = await fetch(`/api/stations/nearby?lat=11.0410&lng=76.0873&maxResults=50`);
+      const data = await res.json();
+      renderMapMarkers(data);
+      renderList(data);
+    }
+
+    function renderMapMarkers(stations) {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+
+      if (stations.length > 0 && stations[0].coordinates?.coordinates) {
+        const [lng, lat] = stations[0].coordinates.coordinates;
+        map.setView([lat, lng], 12);
+      }
+
+      stations.forEach(station => {
+        if (!station.coordinates?.coordinates) return;
+        const [lng, lat] = station.coordinates.coordinates;
+
+        const marker = L.marker([lat, lng])
+          .addTo(map)
+          .bindPopup(`<strong>${station.name}</strong><br>${station.location}<br>₹${station.rate}/kWh`);
+
+        markers.push(marker);
+      });
+    }
+
+    function renderList(stations) {
+      const container = document.getElementById('stationResults');
+      container.innerHTML = '';
+
+      if (stations.length === 0) {
+        container.innerHTML = '<p>No stations found.</p>';
+        return;
+      }
+
+      stations.forEach(station => {
+        const card = document.createElement('div');
+        card.className = 'station-card';
+        card.innerHTML = `
+          <div class="station-card-content">
+            <img src="${station.image}" alt="${station.name}" />
+            <div>
+              <strong>${station.name}</strong><br>
+              ${station.location}<br>
+              ₹${station.rate}/kWh<br>
+              
+              <a href="/stations/${station._id}" style="margin-left: 10px;">View Details</a>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    window.onload = initMap;
+  </script>
+</body>
+</html>

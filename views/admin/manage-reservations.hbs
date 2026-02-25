@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Reservations</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f8;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 220px;
+      background: #343a40;
+      color: white;
+      padding: 20px 15px;
+    }
+
+    .sidebar h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .sidebar a {
+      display: block;
+      color: #ccc;
+      text-decoration: none;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      background: #007bff;
+      color: #fff;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 30px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .filter-bar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .filter-bar input {
+      padding: 8px;
+      border-radius: 6px;
+      margin-right: 10px;
+      border: 1px solid #ccc;
+    }
+
+    .filter-bar button {
+      padding: 8px 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 14px 20px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    th {
+      background-color: #f8f9fa;
+    }
+
+    .status {
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: white;
+      display: inline-block;
+    }
+
+    .complete { background: #28a745; }
+    .ongoing { background: #17a2b8; }
+    .upcoming { background: #ffc107; }
+
+    .actions button {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .actions button:hover {
+      background: #c82333;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="/admin/adminDashboard">Dashboard</a>
+      <a href="/admin/add-station">Add Stations</a>
+      <a href="/admin/station">Stations</a>
+      <a href="/admin/users">Users</a>
+      <a href="/admin/reservations" class="active">Reservations</a>
+      <a href="/admin/logout">Logout</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+      <h2>Manage Reservations</h2>
+
+      <div class="filter-bar">
+        <form method="GET" action="/admin/reservations">
+          <input type="text" name="search" placeholder="Search by station or user..." value="{{search}}" />
+          <button type="submit">Search</button>
+        </form>
+      </div>
+
+      {{#if reservations.length}}
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Station</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Total Price</th>
+              <th>Payment</th>
+              <th>Code</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each reservations}}
+              <tr>
+                <td>{{this.user.name}}<br><small>{{this.user.email}}</small></td>
+                <td>{{this.station.name}}</td>
+                <td>{{this.date}}</td>
+                <td>{{this.startTime}} - {{this.endTime}}</td>
+                <td>₹{{this.totalPrice}}</td>
+                <td>{{this.paymentMethod}}</td>
+                <td>{{this.reservationCode}}</td>
+                <td><span class="status {{this.dynamicStatus}}">{{this.dynamicStatus}}</span></td>
+                <td class="actions">
+                  <form method="POST" action="/admin/reservations/delete/{{this._id}}" onsubmit="return confirm('Are you sure?')">
+                    <button type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      {{else}}
+        <p style="text-align:center;">No reservations found.</p>
+      {{/if}}
+    </div>
+  </div>
+
+</body>
+</html>

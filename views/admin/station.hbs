@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Stations - EV Admin</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+    }
+
+    .sidebar {
+      width: 220px;
+      background-color: #2c3e50;
+      color: white;
+      height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar h1 {
+      font-size: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      display: block;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .sidebar a:hover {
+      background-color: #34495e;
+    }
+
+    .main {
+      flex: 1;
+      padding: 40px;
+    }
+
+    .main h2 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+
+    .station-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .station-table th, .station-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .station-table th {
+      background: #2c3e50;
+      color: white;
+    }
+
+    .station-table tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    .action-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 6px;
+    }
+
+    .edit-btn {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .delete-btn {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .status-btn {
+      background-color: #ffc107;
+      color: black;
+    }
+
+    .station-img {
+      width: 80px;
+      height: auto;
+      border-radius: 6px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <h1>EV Admin</h1>
+    <a href="/admin/adminDashboard">Dashboard</a>
+    <a href="/admin/add-station">Add Station</a>
+    <a href="/admin/station">Stations</a>
+    <a href="/admin/users">Users</a>
+    <a href="/admin/reservations">Reservations</a>
+    <a href="/admin/logout">Logout</a>
+  </div>
+
+  <div class="main">
+    <h2>Manage Charging Stations</h2>
+
+    <table class="station-table">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Name</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Rate (₹/kWh)</th>
+          <th>Slots</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each stations}}
+          <tr>
+            <td><img class="station-img" src="{{this.image}}" alt="Station Image"></td>
+            <td>{{this.name}}</td>
+            <td>{{this.location}}</td>
+            <td>{{this.status}}</td>
+            <td>{{this.rate}}</td>
+            <td>{{this.slots}}</td>
+            <td>
+              <a href="/admin/edit-station/{{this._id}}" class="action-btn edit-btn">Edit</a>
+              <form action="/admin/delete-station/{{this._id}}" method="POST" style="display:inline;">
+                <button type="submit" class="action-btn delete-btn" onclick="return confirm('Delete this station?')">Delete</button>
+              </form>
+              <form action="/admin/toggle-station-status/{{this._id}}" method="POST" style="display:inline;">
+                <button type="submit" class="action-btn status-btn">
+                  {{#if (eq this.status "active")}}Deactivate{{else}}Activate{{/if}}
+                </button>
+              </form>
+            </td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>

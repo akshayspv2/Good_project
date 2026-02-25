@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Signup</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .signup-container {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .signup-container h2 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .signup-container form {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .signup-container input {
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .signup-container button {
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .signup-container button:hover {
+      background-color: #0056b3;
+    }
+
+    .error {
+      color: red;
+      font-size: 14px;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .success {
+      color: green;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .login-link a {
+      color: #007bff;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="signup-container">
+    <h2>Create an Account</h2>
+
+    {{#if errorMessage}}
+      <div class="error" style="display: block;">{{errorMessage}}</div>
+    {{/if}}
+
+    <form id="signupForm" method="POST" action="/signup" onsubmit="return validateForm()">
+      <input type="text" name="name" placeholder="Full Name" required />
+
+      <input type="email" name="email" id="email" placeholder="Email" required />
+      <div class="error" id="emailError">Please enter a valid email.</div>
+
+      <input type="tel" name="phone" id="phone" placeholder="Phone Number" required />
+      <div class="error" id="phoneError">Enter a valid 10-digit phone number.</div>
+
+      <input type="password" name="password" id="password" placeholder="Password" minlength="6" required />
+
+      <input type="password" id="confirmPassword" placeholder="Confirm Password" required />
+      <div class="error" id="confirmError">Passwords do not match.</div>
+
+      <button type="submit">Sign Up</button>
+    </form>
+
+    <div class="login-link">
+      Already have an account? <a href="/login">Login here</a>
+    </div>
+  </div>
+
+  <script>
+    function validateForm() {
+  const email = document.getElementById('email').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const password = document.getElementById('password').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+
+  const emailError = document.getElementById('emailError');
+  const phoneError = document.getElementById('phoneError');
+  const confirmError = document.getElementById('confirmError');
+
+  let isValid = true;
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    emailError.style.display = 'block';
+    isValid = false;
+  } else {
+    emailError.style.display = 'none';
+  }
+
+  // Phone number validation (Indian format, starts with 6-9 and has 10 digits)
+  const phoneRegex = /^[6-9]\d{9}$/;
+  if (!phoneRegex.test(phone)) {
+    phoneError.style.display = 'block';
+    isValid = false;
+  } else {
+    phoneError.style.display = 'none';
+  }
+
+  // Password match check
+  if (password !== confirmPassword) {
+    confirmError.style.display = 'block';
+    isValid = false;
+  } else {
+    confirmError.style.display = 'none';
+  }
+
+  return isValid;
+}
+
+  </script>
+
+</body>
+</html>

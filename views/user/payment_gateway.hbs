@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mock Payment Gateway</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .payment-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      max-width: 550px;
+      width: 100%;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    .summary {
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    .summary strong {
+      display: inline-block;
+      width: 140px;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: 500;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      background-color: #28a745;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      text-decoration: none;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .btn:hover {
+      background-color: #218838;
+    }
+
+    .tab-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .tab-buttons button {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background-color: #f1f1f1;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .tab-buttons button.active {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-buttons button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.getElementById(`${tabId}-btn`).classList.add('active');
+
+      // Set paymentMethod input value
+      const paymentMethodInput = document.getElementById('paymentMethod');
+      paymentMethodInput.value = tabId;
+    }
+
+    window.onload = () => {
+      // Set default payment method on load
+      document.getElementById('paymentMethod').value = 'card';
+    }
+  </script>
+</head>
+<body>
+  <div class="payment-box">
+    <h2>Mock Payment Gateway</h2>
+
+    <div class="summary">
+      <p><strong>Station:</strong> {{station.name}}</p>
+      <p><strong>Date:</strong> {{date}}</p>
+      <p><strong>Time:</strong> {{startTime}} - {{endTime}}</p>
+      <p><strong>Duration:</strong> {{duration}} hour(s)</p>
+      <p><strong>Total Price:</strong> ₹{{totalPrice}}</p>
+    </div>
+
+    <div class="tab-buttons">
+      <button type="button" id="card-btn" class="active" onclick="switchTab('card')">Card</button>
+      <button type="button" id="netbanking-btn" onclick="switchTab('netbanking')">Net Banking</button>
+      <button type="button" id="upi-btn" onclick="switchTab('upi')">UPI</button>
+    </div>
+
+    <form method="POST" action="/payment/confirm">
+      <!-- Card Payment -->
+      <div class="tab-content active" id="card">
+        <label>Cardholder Name</label>
+        <input type="text" name="cardName" placeholder="John Doe">
+        <label>Card Number</label>
+        <input type="text" name="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+        <label>Expiry Date</label>
+        <input type="text" name="expiry" placeholder="MM/YY" maxlength="5">
+        <label>CVV</label>
+        <input type="password" name="cvv" placeholder="123" maxlength="4">
+      </div>
+
+      <!-- Net Banking -->
+      <div class="tab-content" id="netbanking">
+        <label>Select Bank</label>
+        <select name="bank">
+          <option value="hdfc">HDFC Bank</option>
+          <option value="sbi">State Bank of India</option>
+          <option value="icici">ICICI Bank</option>
+          <option value="axis">Axis Bank</option>
+        </select>
+        <label>User ID</label>
+        <input type="text" name="bankUserId" placeholder="Enter your netbanking ID">
+        <label>Password</label>
+        <input type="password" name="bankPassword" placeholder="Password">
+      </div>
+
+      <!-- UPI -->
+      <div class="tab-content" id="upi">
+        <label>UPI ID</label>
+        <input type="text" name="upiId" placeholder="example@upi">
+      </div>
+
+      <!-- Hidden Data -->
+      <input type="hidden" id="paymentMethod" name="paymentMethod" value="card">
+      <input type="hidden" name="userId" value="{{userId}}">
+      <input type="hidden" name="stationId" value="{{stationId}}">
+      <input type="hidden" name="date" value="{{date}}">
+      <input type="hidden" name="startTime" value="{{startTime}}">
+      <input type="hidden" name="endTime" value="{{endTime}}">
+      <input type="hidden" name="duration" value="{{duration}}">
+      <input type="hidden" name="totalPrice" value="{{totalPrice}}">
+
+      <button type="submit" class="btn">Pay ₹{{totalPrice}}</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{station.name}} - Details</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      display: flex;
+      background: #f7f9fc;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #2c3e50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    .main {
+      margin-left: 220px;
+      padding: 30px;
+      flex-grow: 1;
+    }
+
+    .station-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .station-header img {
+      width: 250px;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .details-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .connector-type {
+      display: inline-block;
+      padding: 4px 10px;
+      background-color: #e2e6ea;
+      margin: 4px;
+      border-radius: 5px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      margin: 10px 10px 10px 0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .review {
+      background-color: #f1f1f1;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    textarea, select {
+      width: 100%;
+      max-width: 500px;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+    }
+
+    #map {
+      height: 400px;
+      margin-top: 20px;
+      border-radius: 10px;
+      display: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    #route-info {
+      margin: 10px 0 20px;
+      font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+
+      body {
+        flex-direction: column;
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>ChargeNow</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stations">Find Stations</a>
+    <a href="/reservation-history">My Reservations</a>
+    <a href="/profile">Profile</a>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <div class="station-header">
+      <img src="{{station.image}}" alt="{{station.name}}">
+      <div>
+        <h1>{{station.name}}</h1>
+        <p><strong>Location:</strong> {{station.location}}</p>
+        <p><strong>Output Power:</strong> ₹{{station.outputPower}} kW</p>
+        <p><strong>Rate:</strong> ₹{{station.rate}}/kWh</p>
+        <p><strong>Status:</strong> {{station.status}}</p>
+        <p><strong>Total Slots:</strong> {{station.slots}}</p>
+        <p><strong>Available Slots:</strong> {{station.availableSlots}} / {{station.totalSlots}}</p>
+        <p><strong>Connector Types:</strong>
+          {{#each station.connectors}}
+            <span class="connector-type">{{this}}</span>
+          {{/each}}
+        </p>
+        <button class="btn btn-primary" onclick="toggleReserve('{{station._id}}')">Reserve</button>
+        <button class="btn btn-primary" id="toggleDirectionsBtn">Get Directions</button>
+        <button class="btn btn-primary" onclick="openSlotModal()">Check Slot</button>
+        <button class="btn btn-primary" onclick="openBookedSlotsModal()">Booked Slots</button>
+      </div>
+    </div>
+
+    <!-- Map + Info -->
+    <div id="map"></div>
+    <div id="route-info"></div>
+    <div id="slotModal" style="display: none; position: fixed; top: 0; left: 0; 
+  width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); 
+  align-items: center; justify-content: center; z-index: 9999;">
+  <div style="background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px;">
+    <h3>Check Slot Availability</h3>
+    <label>Date:</label>
+    <input type="date" id="slotDate" required><br><br>
+    <label>Start Time:</label>
+    <input type="time" id="startTime" required><br><br>
+    <label>End Time:</label>
+    <input type="time" id="endTime" required><br><br>
+    <button class="btn btn-primary" onclick="checkSlot()">Check</button>
+    <div id="slotResult" style="margin-top: 15px;"></div>
+    <button class="btn" style="margin-top: 10px;" onclick="closeSlotModal()">Close</button>
+  </div>
+</div>
+<div id="bookedSlotsModal" style="display:none; position: fixed; top: 0; left: 0;
+  width: 100vw; height: 100vh; background: rgba(0,0,0,0.5);
+  align-items: center; justify-content: center; z-index: 9999;">
+  <div style="background: white; padding: 20px; border-radius: 10px; width: 95%; max-width: 600px;">
+    <h3>Upcoming Booked Slots</h3>
+    <label>Filter by Date:</label>
+    <input type="date" id="filterDate" onchange="fetchBookedSlots()" style="margin-bottom: 15px;">
+    <div id="bookedSlotsList" style="max-height: 300px; overflow-y: auto; border-top: 1px solid #ddd; padding-top: 10px;"></div>
+    <button class="btn" onclick="closeBookedSlotsModal()" style="margin-top: 10px;">Close</button>
+  </div>
+</div>
+
+    <div class="details-box">
+      <h3>Station Features</h3>
+      <ul>
+        <li>24/7 Access</li>
+        <li>Fast Charging Supported</li>
+        <li>Security Surveillance</li>
+      </ul>
+    </div>
+
+    <div class="details-box">
+      <h3>User Reviews</h3>
+      {{#if station.reviews.length}}
+        {{#each station.reviews}}
+          <div class="review">
+            <strong>{{this.user}}</strong>: <em>{{this.rating}} ⭐</em><br>
+            <p>{{this.comment}}</p>
+          </div>
+        {{/each}}
+      {{else}}
+        <p>No reviews yet. Be the first to review this station!</p>
+      {{/if}}
+
+      <form action="/stations/{{station._id}}/reviews" method="POST" style="margin-top: 20px;">
+        <h4>Add a Review</h4>
+        <label>Rating:</label>
+        <select name="rating" required>
+          <option value="5">5 ⭐</option>
+          <option value="4">4 ⭐</option>
+          <option value="3">3 ⭐</option>
+          <option value="2">2 ⭐</option>
+          <option value="1">1 ⭐</option>
+        </select>
+        <br>
+        <label>Comment:</label>
+        <textarea name="comment" rows="3" required></textarea>
+        <br>
+        <button class="btn btn-primary" type="submit">Submit Review</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Leaflet & Plugins -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+  <script>
+    function toggleReserve(stationId) {
+  window.location.href = `/reserve/${stationId}`;
+}
+
+    const stationLat = {{station.coordinates.coordinates.[1]}};
+    const stationLng = {{station.coordinates.coordinates.[0]}};
+
+    const toggleBtn = document.getElementById('toggleDirectionsBtn');
+    const mapContainer = document.getElementById('map');
+    const routeInfo = document.getElementById('route-info');
+    let map, routingControl;
+    let mapVisible = false;
+
+    toggleBtn.addEventListener('click', () => {
+      mapVisible = !mapVisible;
+      mapContainer.style.display = mapVisible ? 'block' : 'none';
+      routeInfo.style.display = mapVisible ? 'block' : 'none';
+      toggleBtn.textContent = mapVisible ? 'Hide Directions' : 'Get Directions';
+
+      if (mapVisible && !map) {
+        map = L.map('map').setView([stationLat, stationLng], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const stationMarker = L.marker([stationLat, stationLng])
+          .addTo(map)
+          .bindPopup("{{station.name}}");
+
+        // Geocoder search
+        L.Control.geocoder({
+          defaultMarkGeocode: false
+        })
+        .on('markgeocode', function(e) {
+          const start = e.geocode.center;
+          if (routingControl) map.removeControl(routingControl);
+
+          routingControl = L.Routing.control({
+            waypoints: [start, L.latLng(stationLat, stationLng)],
+            routeWhileDragging: true,
+            createMarker: function(i, wp) {
+              return L.marker(wp.latLng, { draggable: true });
+            }
+          }).addTo(map);
+
+          routingControl.on('routesfound', function(e) {
+            const route = e.routes[0];
+            const distance = (route.summary.totalDistance / 1000).toFixed(2);
+            const time = Math.round(route.summary.totalTime / 60);
+            routeInfo.innerHTML = `🛣 Distance: ${distance} km | ⏱ Time: ${time} min`;
+          });
+        }).addTo(map);
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(function (pos) {
+            const userLat = pos.coords.latitude;
+            const userLng = pos.coords.longitude;
+
+            routingControl = L.Routing.control({
+              waypoints: [
+                L.latLng(userLat, userLng),
+                L.latLng(stationLat, stationLng)
+              ],
+              routeWhileDragging: true,
+              showAlternatives: true,
+              createMarker: function(i, wp) {
+                return L.marker(wp.latLng, { draggable: true });
+              }
+            }).addTo(map);
+
+            routingControl.on('routesfound', function(e) {
+              const route = e.routes[0];
+              const distance = (route.summary.totalDistance / 1000).toFixed(2);
+              const time = Math.round(route.summary.totalTime / 60);
+              routeInfo.innerHTML = `🛣 Distance: ${distance} km | ⏱ Time: ${time} min`;
+            });
+
+          }, () => {
+            alert("Location access denied. You can manually choose a start point using the search box.");
+          });
+        }
+      }
+    });
+
+    function openSlotModal() {
+  document.getElementById("slotModal").style.display = "flex";
+  document.getElementById("slotResult").innerHTML = '';
+}
+
+function closeSlotModal() {
+  document.getElementById("slotModal").style.display = "none";
+}
+
+function checkSlot() {
+  const date = document.getElementById("slotDate").value;
+  const startTime = document.getElementById("startTime").value;
+  const endTime = document.getElementById("endTime").value;
+  const stationId = "{{station._id}}";
+
+  if (!date || !startTime || !endTime) {
+    alert("Please fill all fields.");
+    return;
+  }
+
+  fetch(`/stations/${stationId}/check-slot`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date, startTime, endTime })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const resultDiv = document.getElementById("slotResult");
+    if (data.available) {
+      resultDiv.innerHTML = `<p style="color:green;">✅ Slot is available!</p>`;
+       /* <button class="btn btn-primary" onclick="reserveSlot('${stationId}', '${date}', '${startTime}', '${endTime}')">Reserve</button>`;*/
+    } else {
+      resultDiv.innerHTML = `<p style="color:red;">❌ Slot already booked!</p>
+        <button class="btn btn-primary">Notify Me</button>`;
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Error checking slot.");
+  });
+}
+
+function reserveSlot(stationId, date, startTime, endTime) {
+  fetch(`/stations/${stationId}/reserve-slot`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date, startTime, endTime })
+  })
+  .then(res => {
+    if (res.ok) {
+      alert("Reservation successful!");
+      location.reload();
+    } else {
+      alert("Failed to reserve.");
+    }
+  });
+}
+function openBookedSlotsModal() {
+  document.getElementById("bookedSlotsModal").style.display = "flex";
+  fetchBookedSlots(); // Fetch immediately
+}
+
+function closeBookedSlotsModal() {
+  document.getElementById("bookedSlotsModal").style.display = "none";
+}
+
+function fetchBookedSlots() {
+  const stationId = "{{station._id}}";
+  const date = document.getElementById("filterDate").value;
+  const listDiv = document.getElementById("bookedSlotsList");
+  listDiv.innerHTML = "Loading...";
+
+  const url = `/stations/${stationId}/reservations${date ? `?date=${date}` : ''}`;
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.length) {
+        listDiv.innerHTML = `<p>No reservations found.</p>`;
+        return;
+      }
+
+      listDiv.innerHTML = data.map(r => `
+        <div style="margin-bottom: 10px; padding: 8px; background: #f4f4f4; border-radius: 6px;">
+          <strong>📅 ${r.date}</strong><br>
+          🕒 ${r.startTime} - ${r.endTime}<br>
+          👤 User: ${r.userEmail || 'N/A'}
+        </div>
+      `).join('');
+    })
+    .catch(err => {
+      console.error(err);
+      listDiv.innerHTML = `<p style="color: red;">Error fetching reservations.</p>`;
+    });
+}
+  </script>
+</body>
+</html>
+
+
+
+
+<!--<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{station.name}} - Details</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      display: flex;
+      background: #f7f9fc;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #2c3e50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    .main {
+      margin-left: 220px;
+      padding: 30px;
+      flex-grow: 1;
+    }
+
+    .station-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .station-header img {
+      width: 200px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-right: 20px;
+    }
+
+    .details-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .details-box h3 {
+      margin-top: 0;
+    }
+
+    .connector-type {
+      display: inline-block;
+      padding: 4px 10px;
+      background-color: #e2e6ea;
+      margin: 4px;
+      border-radius: 5px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      margin: 5px 10px 5px 0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .btn-favorite {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .review {
+      background-color: #f1f1f1;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+
+    select {
+      padding: 6px;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+
+      body {
+        flex-direction: column;
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+    #map {
+      height: 400px;
+      border-radius: 10px;
+      margin-top: 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar --
+  <div class="sidebar">
+    <h2>ChargeNow</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stations">Find Stations</a>
+    <a href="/user/reservations">My Reservations</a>
+    <a href="/user/profile">Profile</a>
+    <a href="/user/support">Support</a>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <!-- Main --
+  <div class="main">
+    <div class="station-header">
+      <img src="{{station.image}}" alt="{{station.name}}">
+      <div>
+        <h1>{{station.name}}</h1>
+        <p><strong>Location:</strong> {{station.location}}</p>
+        <p><strong>Rate:</strong> ₹{{station.rate}}/kWh</p>
+        <p><strong>Status:</strong> {{station.status}}</p>
+        <p><strong>Total Slots:</strong> {{station.slots}}</p>
+        <p><strong>Available Slots:</strong> {{station.availableSlots}} / {{station.totalSlots}}</p>
+        <p><strong>Connector Types:</strong>
+          {{#each station.connectors}}
+            <span class="connector-type">{{this}}</span>
+          {{/each}}
+        </p>
+        <button class="btn btn-primary" onclick="toggleReserve('{{station._id}}')">Reserve</button>
+      </div>
+    </div>
+
+    <!-- Leaflet Map --
+    <div id="map"></div>
+
+    <!-- Station Features --
+    <div class="details-box">
+      <h3>Station Features</h3>
+      <ul>
+        <li>24/7 Access</li>
+        <li>Fast Charging Supported</li>
+        <li>Security Surveillance</li>
+      </ul>
+    </div>
+
+    <!-- Reviews --
+    <div class="details-box">
+      <h3>User Reviews</h3>
+      {{#if station.reviews.length}}
+        {{#each station.reviews}}
+          <div class="review">
+            <strong>{{this.user}}</strong>: <em>{{this.rating}} ⭐</em><br>
+            <p>{{this.comment}}</p>
+          </div>
+        {{/each}}
+      {{else}}
+        <p>No reviews yet. Be the first to review this station!</p>
+      {{/if}}
+
+      <form action="/stations/{{station._id}}/reviews" method="POST" style="margin-top: 20px;">
+        <h4>Add a Review</h4>
+        <label>Rating:</label>
+        <select name="rating" required>
+          <option value="5">5 ⭐</option>
+          <option value="4">4 ⭐</option>
+          <option value="3">3 ⭐</option>
+          <option value="2">2 ⭐</option>
+          <option value="1">1 ⭐</option>
+        </select><br><br>
+        <label>Comment:</label><br>
+        <textarea name="comment" rows="3" required></textarea><br><br>
+        <button class="btn btn-primary" type="submit">Submit Review</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Leaflet Scripts --
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
+
+  <script>
+    function toggleReserve(stationId) {
+      fetch(`/reserve/${stationId}`, {
+        method: 'POST'
+      }).then(() => location.reload());
+    }
+
+    // Station coordinates from Handlebars
+    const stationLat = {{station.coordinates.coordinates.[1]}};
+    const stationLng = {{station.coordinates.coordinates.[0]}};
+
+    const map = L.map('map').setView([stationLat, stationLng], 13);
+
+    // Tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Marker for the station
+    const stationMarker = L.marker([stationLat, stationLng])
+      .addTo(map)
+      .bindPopup("{{station.name}}")
+      .openPopup();
+
+    // Routing
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function (position) {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+
+        // Draw route
+        L.Routing.control({
+          waypoints: [
+            L.latLng(userLat, userLng),
+            L.latLng(stationLat, stationLng)
+          ],
+          routeWhileDragging: false,
+          show: false,
+          createMarker: function () { return null; }
+        }).addTo(map);
+      }, function () {
+        alert("Location access denied. Directions won't be shown.");
+      });
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  </script>
+</body>
+</html>-->
+
+
+
+<!--code with google map
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{station.name}} - Details</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      display: flex;
+      background: #f7f9fc;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #2c3e50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    .main {
+      margin-left: 220px;
+      padding: 30px;
+      flex-grow: 1;
+    }
+
+    .station-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .station-header img {
+      width: 200px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-right: 20px;
+    }
+
+    .details-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .details-box h3 {
+      margin-top: 0;
+    }
+
+    .connector-type {
+      display: inline-block;
+      padding: 4px 10px;
+      background-color: #e2e6ea;
+      margin: 4px;
+      border-radius: 5px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      margin: 5px 10px 5px 0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .btn-favorite {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .review {
+      background-color: #f1f1f1;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+
+    select {
+      padding: 6px;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+
+      body {
+        flex-direction: column;
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>ChargeNow</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stations">Find Stations</a>
+    <a href="/user/reservations">My Reservations</a>
+    <a href="/user/profile">Profile</a>
+    <a href="/user/support">Support</a>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <div class="main">
+    <div class="station-header">
+      <img src="{{station.image}}" alt="{{station.name}}">
+      <div>
+        <h1>{{station.name}}</h1>
+        <p><strong>Location:</strong> {{station.location}}</p>
+        <p><strong>Rate:</strong> ₹{{station.rate}}/kWh</p>
+        <p><strong>Status:</strong> {{station.status}}</p>
+        <p><strong>Total Slots:</strong> {{station.slots}}</p>
+        <p><strong>Available Slots:</strong> {{station.availableSlots}} / {{station.totalSlots}}</p>
+        <p><strong>Connector Types:</strong>
+          {{#each station.connectors}}
+            <span class="connector-type">{{this}}</span>
+          {{/each}}
+        </p>
+
+        <button class="btn btn-primary" onclick="toggleReserve('{{station._id}}')">Reserve</button>
+        <a class="btn btn-favorite" target="_blank"
+           href="https://www.google.com/maps/dir/?api=1&destination={{station.coordinates.coordinates.[1]}},{{station.coordinates.coordinates.[0]}}">
+           Get Directions
+        </a>
+      </div>
+    </div>
+
+    <div class="details-box">
+      <h3>Station Features</h3>
+      <ul>
+        <li>24/7 Access</li>
+        <li>Fast Charging Supported</li>
+        <li>Security Surveillance</li>
+      </ul>
+    </div>
+
+    <div class="details-box">
+      <h3>User Reviews</h3>
+
+      {{#if station.reviews.length}}
+        {{#each station.reviews}}
+          <div class="review">
+            <strong>{{this.user}}</strong>: <em>{{this.rating}} ⭐</em><br>
+            <p>{{this.comment}}</p>
+          </div>
+        {{/each}}
+      {{else}}
+        <p>No reviews yet. Be the first to review this station!</p>
+      {{/if}}
+
+      <form action="/stations/{{station._id}}/reviews" method="POST" style="margin-top: 20px;">
+        <h4>Add a Review</h4>
+        <label>Rating:</label>
+        <select name="rating" required>
+          <option value="5">5 ⭐</option>
+          <option value="4">4 ⭐</option>
+          <option value="3">3 ⭐</option>
+          <option value="2">2 ⭐</option>
+          <option value="1">1 ⭐</option>
+        </select><br><br>
+        <label>Comment:</label><br>
+        <textarea name="comment" rows="3" required></textarea><br><br>
+        <button class="btn btn-primary" type="submit">Submit Review</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function toggleReserve(stationId) {
+      fetch(`/reserve/${stationId}`, {
+        method: 'POST'
+      }).then(() => location.reload());
+    }
+  </script>
+</body>
+</html>-->
+
+
+
+
+
+
+<!--<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{station.name}} - Details</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      display: flex;
+      background: #f7f9fc;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #2c3e50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    .main {
+      margin-left: 220px;
+      padding: 30px;
+      flex-grow: 1;
+    }
+
+    .station-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .station-header img {
+      width: 200px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-right: 20px;
+    }
+
+    .details-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .details-box h3 {
+      margin-top: 0;
+    }
+
+    .connector-type {
+      display: inline-block;
+      padding: 4px 10px;
+      background-color: #e2e6ea;
+      margin: 4px;
+      border-radius: 5px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      margin: 5px 10px 5px 0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .btn-favorite {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .review {
+      background-color: #f1f1f1;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+
+    select {
+      padding: 6px;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+
+      body {
+        flex-direction: column;
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>ChargeNow</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stations">Find Stations</a>
+    <a href="/user/reservations">My Reservations</a>
+    <a href="/user/profile">Profile</a>
+    <a href="/user/support">Support</a>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <div class="main">
+    <div class="station-header">
+      <img src="{{station.image}}" alt="{{station.name}}">
+      <div>
+        <h1>{{station.name}}</h1>
+        <p><strong>Location:</strong> {{station.location}}</p>
+        <p><strong>Rate:</strong> ₹{{station.rate}}/kWh</p>
+        <p><strong>Status:</strong> {{station.status}}</p>
+        <p><strong>Total Slots:</strong> {{station.slots}}</p>
+        <p><strong>Available Slots:</strong> {{station.availableSlots}} / {{station.totalSlots}}</p>
+        <p><strong>Connector Types:</strong>
+          {{#each station.connectors}}
+            <span class="connector-type">{{this}}</span>
+          {{/each}}
+        </p>
+
+        <button class="btn btn-primary" onclick="toggleREserve('{{station._id}}')">Reserve</button>
+      </div>
+    </div>
+
+    <div class="details-box">
+      <h3>Station Features</h3>
+      <ul>
+        <li>24/7 Access</li>
+        <li>Fast Charging Supported</li>
+        <li>Security Surveillance</li>
+      </ul>
+    </div>
+
+    <div class="details-box">
+      <h3>User Reviews</h3>
+
+      {{#if station.reviews.length}}
+        {{#each station.reviews}}
+          <div class="review">
+            <strong>{{this.user}}</strong>: <em>{{this.rating}} ⭐</em><br>
+            <p>{{this.comment}}</p>
+          </div>
+        {{/each}}
+      {{else}}
+        <p>No reviews yet. Be the first to review this station!</p>
+      {{/if}}
+
+      <form action="/stations/{{station._id}}/reviews" method="POST" style="margin-top: 20px;">
+        <h4>Add a Review</h4>
+        <label>Rating:</label>
+        <select name="rating" required>
+          <option value="5">5 ⭐</option>
+          <option value="4">4 ⭐</option>
+          <option value="3">3 ⭐</option>
+          <option value="2">2 ⭐</option>
+          <option value="1">1 ⭐</option>
+        </select><br><br>
+        <label>Comment:</label><br>
+        <textarea name="comment" rows="3" required></textarea><br><br>
+        <button class="btn btn-primary" type="submit">Submit Review</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function toggleReserve(stationId) {
+      fetch(`/reserve/${stationId}`, {
+        method: 'POST'
+      }).then(() => location.reload());
+    }
+  </script>
+</body>
+</html>

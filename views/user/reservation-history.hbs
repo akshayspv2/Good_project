@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Reservations</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      display: flex;
+      background: #f4f6f8;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #2c3e50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    .main {
+      margin-left: 220px;
+      flex-grow: 1;
+      padding: 30px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .filter-bar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .filter-bar input[type="date"] {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-right: 10px;
+    }
+
+    .filter-bar button {
+      padding: 8px 16px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      max-width: 1100px;
+      margin: auto;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 14px 20px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    th {
+      background-color: #f8f9fa;
+    }
+
+    .status {
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: white;
+      display: inline-block;
+    }
+
+    .complete { background: #28a745; }
+    .ongoing { background: #17a2b8; }
+    .upcoming { background: #ffc107; }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+
+      .main {
+        margin: 0;
+        padding: 20px;
+      }
+
+      body {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>ChargeNow</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stations">Find Stations</a>
+    <a href="/reservation-history">My Reservations</a>
+    <a href="/profile">Profile</a>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <div class="main">
+    <h2>Your Reservation History</h2>
+
+    <div class="filter-bar">
+      <form method="GET" action="/reservation-history">
+        <input type="date" name="date" value="{{selectedDate}}" />
+        <button type="submit">Filter</button>
+      </form>
+    </div>
+
+    {{#if reservations.length}}
+      <table>
+        <thead>
+          <tr>
+            <th>Station Name</th>
+            <th>Location</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Total Price</th>
+            <th>Payment Method</th>
+            <th>Code</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each reservations}}
+            <tr>
+              <td>{{this.station.name}}</td>
+              <td>{{this.station.location}}</td>
+              <td>{{this.date}}</td>
+              <td>{{this.startTime}} - {{this.endTime}}</td>
+              <td>₹{{this.totalPrice}}</td>
+              <td>{{this.paymentMethod}}</td>
+              <td>{{this.reservationCode}}</td>
+              <td><span class="status {{this.dynamicStatus}}">{{this.dynamicStatus}}</span></td>
+                    <td>
+        {{#if (eq this.dynamicStatus "upcoming")}}
+          <form action="/cancel-reservation" method="POST" style="display:inline;">
+            <input type="hidden" name="reservationId" value="{{this._id}}">
+            <button type="submit" style="background: red; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;">Cancel</button>
+          </form>
+        {{else}}
+          -
+        {{/if}}
+      </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    {{else}}
+      <p style="text-align: center;">No reservations found.</p>
+    {{/if}}
+  </div>
+</body>
+</html>
+
+
+
+
+
+<!--<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Reservations</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f8;
+      padding: 30px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .filter-bar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .filter-bar input[type="date"] {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-right: 10px;
+    }
+
+    .filter-bar button {
+      padding: 8px 16px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      max-width: 1100px;
+      margin: auto;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 14px 20px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    th {
+      background-color: #f8f9fa;
+    }
+
+    .status {
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: white;
+      display: inline-block;
+    }
+
+    .complete { background: #28a745; }
+    .ongoing { background: #17a2b8; }
+    .upcoming { background: #ffc107; }
+  </style>
+</head>
+<body>
+  <h2>Your Reservation History</h2>
+
+  <div class="filter-bar">
+    <form method="GET" action="/reservation-history">
+      <input type="date" name="date" value="{{selectedDate}}" />
+      <button type="submit">Filter</button>
+    </form>
+  </div>
+
+  {{#if reservations.length}}
+    <table>
+      <thead>
+        <tr>
+          <th>Station Name</th>
+          <th>Location</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Total Price</th>
+          <th>Payment Method</th>
+          <th>Code</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each reservations}}
+          <tr>
+            <td>{{this.station.name}}</td>
+            <td>{{this.station.location}}</td>
+            <td>{{this.date}}</td>
+            <td>{{this.startTime}} - {{this.endTime}}</td>
+            <td>₹{{this.totalPrice}}</td>
+            <td>{{this.paymentMethod}}</td>
+            <td>{{this.reservationCode}}</td>
+            <td><span class="status {{this.dynamicStatus}}">{{this.dynamicStatus}}</span></td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  {{else}}
+    <p style="text-align: center;">No reservations found.</p>
+  {{/if}}
+</body>
+</html>-->

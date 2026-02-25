@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Vehicles</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9fafb;
+      padding: 30px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .filter-container {
+      width: 90%;
+      margin: 0 auto 20px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .filter-container input {
+      padding: 8px 12px;
+      width: 300px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .add-btn {
+      padding: 10px 20px;
+      background: #28a745;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+    }
+
+    .add-btn:hover {
+      background: #218838;
+    }
+
+    .vehicle-table {
+      width: 90%;
+      margin: auto;
+      background: white;
+      border-collapse: collapse;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .vehicle-table th, .vehicle-table td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .vehicle-table th {
+      background-color: #f1f3f5;
+    }
+
+    .actions button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .delete-btn {
+      background-color: #dc3545;
+      color: white;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Vehicle Management</h2>
+
+  <div class="filter-container">
+    <input type="text" id="vehicleFilter" placeholder="Search by company or model..." onkeyup="filterVehicles()">
+    <a href="/admin/add-vehicle" class="add-btn">Add New Vehicle</a>
+  </div>
+
+  <table class="vehicle-table" id="vehicleTable">
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Model</th>
+        <th>Battery Capacity (kWh)</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each vehicles}}
+        <tr>
+          <td>{{this.company}}</td>
+          <td>{{this.model}}</td>
+          <td>{{this.capacity}}</td>
+          <td class="actions">
+            <button class="edit-btn">Edit</button>
+            <button class="delete-btn">Delete</button>
+          </td>
+        </tr>
+      {{else}}
+        <tr>
+          <td colspan="4" style="text-align: center;">No vehicles found.</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <script>
+    function filterVehicles() {
+      const input = document.getElementById("vehicleFilter").value.toLowerCase();
+      const table = document.getElementById("vehicleTable");
+      const rows = table.getElementsByTagName("tr");
+
+      for (let i = 1; i < rows.length; i++) {
+        const companyCell = rows[i].getElementsByTagName("td")[0];
+        const modelCell = rows[i].getElementsByTagName("td")[1];
+
+        if (companyCell && modelCell) {
+          const company = companyCell.textContent.toLowerCase();
+          const model = modelCell.textContent.toLowerCase();
+
+          if (company.includes(input) || model.includes(input)) {
+            rows[i].style.display = "";
+          } else {
+            rows[i].style.display = "none";
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>

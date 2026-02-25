@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Confirm Reservation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      display: flex;
+      background: #f4f6f9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #2c3e50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    .main {
+      margin-left: 220px;
+      padding: 30px;
+      flex-grow: 1;
+    }
+
+    .confirmation-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      max-width: 700px;
+    }
+
+    h2 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .detail {
+      margin: 10px 0;
+    }
+
+    .highlight {
+      font-weight: bold;
+    }
+
+    .button-container {
+      margin-top: 30px;
+    }
+
+    .btn {
+      background-color: #28a745;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sidebar">
+    <h2>ChargeNow</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stations">Find Stations</a>
+    <a href="/user/reservations">My Reservations</a>
+    <a href="/user/profile">Profile</a>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <div class="main">
+    <div class="confirmation-box">
+      <h2>Confirm Your Reservation</h2>
+
+      <div class="detail"><span class="highlight">Station Name:</span> {{station.name}}</div>
+      <div class="detail"><span class="highlight">Location:</span> {{station.location}}</div>
+      <div class="detail"><span class="highlight">Rate per kWh:</span> ₹{{station.rate}}</div>
+      <div class="detail"><span class="highlight">Date:</span> {{reservation.date}}</div>
+      <div class="detail"><span class="highlight">Start Time:</span> {{reservation.startTime}}</div>
+      <div class="detail"><span class="highlight">End Time:</span> {{reservation.endTime}}</div>
+      <div class="detail"><span class="highlight">Duration:</span> {{duration}} hours</div>
+      <div class="detail"><span class="highlight">Total Price:</span> ₹{{totalPrice}}</div>
+
+      <div class="button-container">
+        <form method="POST" action="/payment">
+           <input type="hidden" name="stationId" value="{{station._id}}">
+  <input type="hidden" name="date" value="{{reservation.date}}">
+  <input type="hidden" name="startTime" value="{{reservation.startTime}}">
+  <input type="hidden" name="endTime" value="{{reservation.endTime}}">
+          <button type="submit" class="btn">Proceed to Pay</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
